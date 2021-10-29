@@ -10,6 +10,11 @@
 #     repository: ljfranklin/terraform-resource
 #     tag: '1.0.10'
 
+resource_types:
+- name: gcs-resource
+  type: registry-image
+  source: {repository: frodenas/gcs-resource}
+
 resources:
 - name: kf-infra
   type: git
