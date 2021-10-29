@@ -70,7 +70,7 @@ jobs:
     params:
       BILLING_ACCOUNT_ID: ((billing_account_id))
       BUCKET_LOCATION: ((region))
-      FOLDER_NAME: ((bootstrap_bucket_path))
+      FOLDER_NAME: ((project_folder))
       GCP_CREDENTIALS_JSON: ((inception_gcp_credentials_json))
       ORGANIZATION_ID: ((organization_id))
       PROJECT_ID: ((project_id))

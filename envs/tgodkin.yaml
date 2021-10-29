@@ -2,4 +2,4 @@
 env_name: tgodkin
 project_id: tgodkin-kf
 region: europe-west2
-bootstrap_bucket_path: kf-environments
+project_folder: spikes
