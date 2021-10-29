@@ -40,7 +40,7 @@ jobs:
   - get: kf-infra
     trigger: true
   - set_pipeline: self
-    file: kf-infra/ci/pipeline.yml
+    file: kf-infra/ci/pipeline.yaml
     var_files: [kf-infra/envs/((env)).yaml]
 
 # - name: terraform-cluster
