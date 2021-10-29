@@ -27,7 +27,7 @@ resources:
 
 - name: project-setup-tfstate
   type: gcs-resource
-  icon: bucket
+  icon: database
   source:
     bucket: ((project_id))
     json_key: ((inception_gcp_credentials_json))
@@ -101,7 +101,7 @@ jobs:
       CREDHUB_CLIENT: ((credhub.client))
       CREDHUB_SERVER: ((credhub.server))
     vars:
-      args: set --value '((.:service_creds.gcp_credentials_json))' --type value --name /concourse/((concourse_team))/((concourse_pipeline))/gcp_credentials_json
+      cli_args: set --value '((.:service_creds.gcp_credentials_json))' --type value --name /concourse/((concourse_team))/((concourse_pipeline))/gcp_credentials_json
 
 # - name: terraform-cluster
 #   serial: true
