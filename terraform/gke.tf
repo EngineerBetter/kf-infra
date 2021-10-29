@@ -13,7 +13,7 @@ resource "google_container_cluster" "primary" {
 
 resource "google_container_node_pool" "nodes" {
   name       = "${var.cluster_name}-node-pool"
-  location   = var.region
+  location   = google_container_cluster.primary.location
   cluster    = google_container_cluster.primary.name
   node_count = 4
 
