@@ -1,0 +1,61 @@
+---
+# locals:
+#   vpc_name: &vpc_name kf-vpc-((tgodkin))
+#   cluster_name: &cluster_name kf-cluster-((tgodkin))
+
+# resource_types:
+# - name: terraform
+#   type: registry-image
+#   source:
+#     repository: ljfranklin/terraform-resource
+#     tag: '1.0.10'
+
+resources:
+- name: kf-infra
+  type: git
+  icon: github
+  source: {uri: https://github.com/EngineerBetter/kf-infra}
+
+# - name: kf-terraform
+#   type: terraform
+#   icon: terraform
+#   source:
+#     env_name: default
+#     backend_type: gcs
+#     backend_config:
+#       bucket: ((tfstate_bucket_name))
+#       prefix: terraform/state
+#     env:
+#       GOOGLE_CREDENTIALS: ((gcp_credentials_json))
+#       GCE_SERVICE_ACCOUNT: ((gcp_credentials_json))
+#     var_files:
+#     - kf-pipelines/vars/((env)).yml
+#     vars:
+#       service_account_email: ci-bot@((project_id)).iam.gserviceaccount.com
+
+jobs:
+- name: set-pipeline
+  serial: true
+  plan:
+  - get: kf-infra
+    trigger: true
+  - set_pipeline: self
+    file: kf-infra/ci/pipeline.yml
+    var_files: kf-infra/envs/((env)).yml
+
+# - name: terraform-cluster
+#   serial: true
+#   plan:
+#   - in_parallel:
+#     - get: kf-infra
+#       trigger: true
+#       passed: [set-pipeline]
+#     - get: pcf-ops-image
+#   - put: kf-terraform
+#     params:
+#       terraform_source: kf-infra/terraform
+#       vars:
+#         project_id: ((project_id))
+#         region: ((region))
+#         vpc_name: *vpc_name
+#         cluster_name: *cluster_name
