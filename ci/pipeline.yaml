@@ -33,7 +33,7 @@ resources:
     json_key: ((inception_gcp_credentials_json))
     versioned_file: ci/terraform.tfstate
 
-- name: project-account-and-bucket-terraform
+- name: project
   type: terraform
   icon: terraform
   source:
@@ -46,6 +46,11 @@ resources:
     vars:
       project_id: ((project_id))
       region: ((region))
+
+- name: pcf-ops
+  type: registry-image
+  icon: docker
+  source: {repository: engineerbetter/pcf-ops}
 
 jobs:
 - name: set-pipeline
@@ -64,7 +69,7 @@ jobs:
       trigger: true
       passed: [set-pipeline]
     - get: concourse-gcp-tf-bootstrap
-    # - get: pcf-ops-image
+    - get: pcf-ops
   - task: bootstrap-terraform
     file: concourse-gcp-tf-bootstrap/tasks/bootstrap.yml
     input_mapping:
@@ -82,18 +87,21 @@ jobs:
       put: project-setup-tfstate
       params:
         file: tfstate-out/terraform.tfstate
-  - put: project-account-and-bucket-terraform
+  - put: project
     params: {terraform_source: kf-infra/terraform/project}
-  # - load_var: service_creds
-  #   file: project-account-and-bucket-terraform/metadata
-  #   format: json
-  # - task: add-gcp-creds-to-credhub
-  #   image: pcf-ops-image
-  #   file: kf-pipelines/ci/tasks/add-value-to-credhub.yaml
-  #   params:
-  #     NAME: /concourse/((concourse_team))/((concourse_pipeline))/gcp_credentials_json
-  #     VALUE: ((.:service_creds.gcp_credentials_json))
-  #     <<: *credhub-params
+  - load_var: service_creds
+    file: project/metadata
+    format: json
+  - task: add-gcp-creds-to-credhub
+    image: pcf-ops
+    file: kf-infra/ci/tasks/credhub.yaml
+    params:
+      CREDHUB_CA_CERT: ((credhub.ca_cert))
+      CREDHUB_SECRET: ((credhub.secret))
+      CREDHUB_CLIENT: ((credhub.client))
+      CREDHUB_SERVER: ((credhub.server))
+    vars:
+      args: set --value '((.:service_creds.gcp_credentials_json))' --type value --name /concourse/((concourse_team))/((concourse_pipeline))/gcp_credentials_json
 
 # - name: terraform-cluster
 #   serial: true

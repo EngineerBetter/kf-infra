@@ -1,0 +1,21 @@
+platform: linux
+
+params:
+  CREDHUB_CA_CERT:
+  CREDHUB_SECRET:
+  CREDHUB_CLIENT:
+  CREDHUB_SERVER:
+
+run:
+  path: bash
+  args:
+  - -euo
+  - pipefail
+  - -c
+  - |
+    : "${CREDHUB_CA_CERT:?Variable not set or empty}"
+    : "${CREDHUB_SECRET:?Variable not set or empty}"
+    : "${CREDHUB_CLIENT:?Variable not set or empty}"
+    : "${CREDHUB_SERVER:?Variable not set or empty}"
+
+    credhub ((cli_args))
