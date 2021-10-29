@@ -2,3 +2,4 @@
 env_name: tgodkin
 project_id: tgodkin-sandbox
 region: europe-west2
+bootstrap_bucket_path: kf-environments

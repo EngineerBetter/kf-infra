@@ -16,6 +16,11 @@ resources:
   icon: github
   source: {uri: https://github.com/EngineerBetter/kf-infra}
 
+- name: concourse-gcp-tf-bootstrap
+  type: git
+  icon: github
+  source: {uri: https://github.com/EngineerBetter/concourse-gcp-tf-bootstrap}
+
 # - name: kf-terraform
 #   type: terraform
 #   icon: terraform
@@ -42,6 +47,45 @@ jobs:
   - set_pipeline: self
     file: kf-infra/ci/pipeline.yaml
     var_files: [kf-infra/envs/((env_name)).yaml]
+
+- name: setup-project
+  plan:
+  - in_parallel:
+    - get: kf-infra
+      trigger: true
+      passed: [set-pipeline]
+    - get: concourse-gcp-tf-bootstrap
+    - get: pcf-ops-image
+  - task: bootstrap-terraform
+    file: concourse-gcp-tf-bootstrap/tasks/bootstrap.yml
+    input_mapping:
+      gcp-bootstrap: concourse-gcp-tf-bootstrap
+    params:
+      BILLING_ACCOUNT_ID: ((billing_account_id))
+      BUCKET_LOCATION: ((region))
+      FOLDER_NAME: ((bootstrap_bucket_path))
+      GCP_CREDENTIALS_JSON: ((inception_gcp_credentials_json))
+      ORGANIZATION_ID: ((organization_id))
+      PROJECT_ID: ((project_id))
+      PROJECT_NAME: ((project_id))
+      GCP_FLAKINESS_SLEEP: "60"
+    ensure:
+      put: project-setup-tfstate
+      params:
+        file: tfstate-out/terraform.tfstate
+  # - put: project-account-and-bucket-terraform
+  #   params:
+  #     terraform_source: kf-pipelines/terraform/deployments/project-account-and-bucket
+  # - load_var: service_creds
+  #   file: project-account-and-bucket-terraform/metadata
+  #   format: json
+  # - task: add-gcp-creds-to-credhub
+  #   image: pcf-ops-image
+  #   file: kf-pipelines/ci/tasks/add-value-to-credhub.yaml
+  #   params:
+  #     NAME: /concourse/((concourse_team))/((concourse_pipeline))/gcp_credentials_json
+  #     VALUE: ((.:service_creds.gcp_credentials_json))
+  #     <<: *credhub-params
 
 # - name: terraform-cluster
 #   serial: true
