@@ -65,6 +65,7 @@ resources:
       region: ((region))
       vpc_name: *vpc_name
       cluster_name: *cluster_name
+      account_id: ((kf_service_account_id))
 
 - name: pcf-ops
   type: registry-image
@@ -216,21 +217,17 @@ jobs:
     - get: pcf-ops
     - get: kubernetes
       passed: [terraform-kubernetes]
-  - in_parallel:
-    - task: generate-kubeconfig
-      file: kf-infra/ci/tasks/generate-kubeconfig.yaml
-      params:
-        GOOGLE_CREDENTIALS: ((gcp_credentials_json))
-        ZONE: *cluster_zone
-        CLUSTER: *cluster_name
-    - load_var: kubernetes-terraform-outputs
-      file: kubernetes/metadata
-      format: json
+  - task: generate-kubeconfig
+    file: kf-infra/ci/tasks/generate-kubeconfig.yaml
+    params:
+      GOOGLE_CREDENTIALS: ((gcp_credentials_json))
+      ZONE: *cluster_zone
+      CLUSTER: *cluster_name
   - task: install-kf
     file: kf-infra/ci/tasks/install-kf.yaml
     image: pcf-ops
     vars:
       kf_version: ((kf_version))
-      service_account_name: ((.:kubernetes-terraform-outputs.service_account_name))
+      service_account_name: ((kf_service_account_id))
       container_registry_url: ((region))-docker.pkg.dev/((project_id))/kf-cluster-((env_name))
       project_id: ((project_id))

@@ -3,6 +3,7 @@ env_name: tgodkin
 project_id: tgodkin-kf
 region: europe-west2
 project_folder: spikes
+kf_service_account_id: sandbox-gke-sa
 
 concourse_team: main
 concourse_pipeline: kf-infra-tgodkin

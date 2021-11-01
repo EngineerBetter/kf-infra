@@ -13,3 +13,7 @@ variable "vpc_name" {
 variable "cluster_name" {
   type = string
 }
+
+variable "account_id" {
+  type = string
+}
