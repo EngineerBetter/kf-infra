@@ -125,3 +125,16 @@ jobs:
     passed: [setup-project]
   - put: kubernetes
     params: {terraform_source: kf-infra/terraform/kubernetes}
+
+- name: install-asm
+  serial: true
+  plan:
+  - in_parallel:
+    - get: kf-infra
+      trigger: true
+      passed: [terraform-kubernetes]
+    - get: pcf-ops
+  - task: download-asmcli
+    image: pcf-ops
+    file: kf-infra/ci/tasks/download-asmcli.yaml
+    vars: {asm_version: ((asm_version))}

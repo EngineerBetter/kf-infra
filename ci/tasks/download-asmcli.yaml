@@ -1,0 +1,18 @@
+platform: linux
+
+outputs:
+- name: asmcli
+
+run:
+  path: bash
+  args:
+  - -euo
+  - pipefail
+  - -c
+  - |
+    cd asmcli
+
+    curl 'https://storage.googleapis.com/csm-artifacts/asm/asmcli_((asm_version))' > asmcli
+    curl 'https://storage.googleapis.com/csm-artifacts/asm/asmcli_((asm_version)).sha256' > asmcli.sha256
+    sha256sum -c --ignore-missing asmcli.sha256
+    chmod +rx asmcli

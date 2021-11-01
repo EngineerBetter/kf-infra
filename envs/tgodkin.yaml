@@ -6,3 +6,5 @@ project_folder: spikes
 
 concourse_team: main
 concourse_pipeline: kf-infra-tgodkin
+
+asm_version: "1.11"
