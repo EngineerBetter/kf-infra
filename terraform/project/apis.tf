@@ -70,3 +70,7 @@ resource "google_project_service" "gkeconnect" {
 resource "google_project_service" "gkehub" {
   service = "gkehub.googleapis.com"
 }
+
+resource "google_project_service" "service_usage" {
+  service = "serviceusage.googleapis.com"
+}
