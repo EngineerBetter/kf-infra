@@ -5,8 +5,8 @@ region: europe-west2
 project_folder: spikes
 kf_service_account_id: sandbox-gke-sa
 
-concourse_team: main
-concourse_pipeline: kf-infra-tgodkin
+concourse_team: corelogic
+concourse_pipeline: kf-infra
 
 asm_version: "1.11"
 tekton_version: "0.26.0"
