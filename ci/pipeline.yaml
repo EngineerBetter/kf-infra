@@ -2,6 +2,7 @@
 locals:
   vpc_name: &vpc_name kf-vpc-((env_name))
   cluster_name: &cluster_name kf-cluster-((env_name))
+  cluster_zone: &cluster_zone ((region))-a
 
 resource_types:
 - name: gcs-resource
@@ -138,3 +139,10 @@ jobs:
     image: pcf-ops
     file: kf-infra/ci/tasks/download-asmcli.yaml
     vars: {asm_version: ((asm_version))}
+  - task: install-asm
+    image: pcf-ops
+    file: kf-infra/ci/tasks/install-asm.yaml
+    vars:
+      project_id: ((project_id))
+      zone: *cluster_zone
+      cluster_name: *cluster_name
