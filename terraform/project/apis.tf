@@ -75,6 +75,6 @@ resource "google_project_service" "service_usage" {
   service = "serviceusage.googleapis.com"
 }
 
-resource "google_project_service" "service_usage" {
+resource "google_project_service" "sqladmin" {
   service = "sqladmin.googleapis.com"
 }
