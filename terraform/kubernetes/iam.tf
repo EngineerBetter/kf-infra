@@ -41,3 +41,8 @@ resource "google_service_account_iam_member" "cnrm_controller_manager" {
   member             = "serviceAccount:${var.project_id}.svc.id.goog[cnrm-system/cnrm-controller-manager]"
   service_account_id = google_service_account.default.name
 }
+
+resource "google_project_iam_member" "registry_writer" {
+  role   = "roles/artifactregistry.writer"
+  member = "serviceAccount:${google_service_account.default.email}"
+}
