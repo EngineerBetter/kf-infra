@@ -12,8 +12,6 @@ run:
   - |
     source kubeconfig/source
 
-    set -x
-
     kubectl \
       apply \
       --filename \

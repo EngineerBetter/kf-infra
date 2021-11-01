@@ -158,17 +158,18 @@ jobs:
     - get: pcf-ops
     - get: kubernetes
       passed: [terraform-kubernetes]
-  - task: generate-kubeconfig
-    file: kf-infra/ci/tasks/generate-kubeconfig.yaml
-    params:
-      GOOGLE_CREDENTIALS: ((gcp_credentials_json))
-      ZONE: *cluster_zone
-      CLUSTER: *cluster_name
-  - load_var: kubernetes-terraform-outputs
-    file: kubernetes/metadata
-    format: json
+  - in_parallel:
+    - task: generate-kubeconfig
+      file: kf-infra/ci/tasks/generate-kubeconfig.yaml
+      params:
+        GOOGLE_CREDENTIALS: ((gcp_credentials_json))
+        ZONE: *cluster_zone
+        CLUSTER: *cluster_name
+    - load_var: kubernetes-terraform-outputs
+      file: kubernetes/metadata
+      format: json
   - task: install-tekton
-    file: kf-infra/ci/tasks/generate-kubeconfig.yaml
+    file: kf-infra/ci/tasks/install-tekton.yaml
     image: pcf-ops
     vars:
       tekton_version: ((tekton_version))
