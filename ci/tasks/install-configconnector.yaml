@@ -1,0 +1,33 @@
+platform: linux
+
+inputs:
+- name: kubeconfig
+
+run:
+  path: bash
+  args:
+  - -euo
+  - pipefail
+  - -c
+  - |
+    source kubeconfig/source
+
+    curl \
+      "https://storage.googleapis.com/configconnector-operator/((configconnector_version))/release-bundle.tar.gz" \
+      | tar \
+          --gzip \
+          --extract \
+          --strip-components 2 \
+          --file - \
+          ./operator-system/configconnector-operator.yaml
+
+    kubectl apply --filename configconnector-operator.yaml
+
+    cat <<EOF | kubectl apply --filename -
+    apiVersion: core.cnrm.cloud.google.com/v1beta1
+    kind: ConfigConnector
+    metadata: {name: configconnector.core.cnrm.cloud.google.com}
+    spec:
+      mode: cluster
+      googleServiceAccount: ((service_account_email))
+    EOF

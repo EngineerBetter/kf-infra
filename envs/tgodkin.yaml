@@ -9,3 +9,4 @@ concourse_pipeline: kf-infra-tgodkin
 
 asm_version: "1.11"
 tekton_version: "0.26.0"
+configconnector_version: "1.60.0"
