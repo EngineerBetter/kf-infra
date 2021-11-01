@@ -1,0 +1,22 @@
+platform: linux
+
+inputs:
+- name: kubeconfig
+
+params:
+ API_USERNAME: ((api_username))
+ API_PASSWORD: ((api_password))
+run:
+  path: bash
+  args:
+  - -euo
+  - pipefail
+  - -c
+  - |
+    source kubeconfig/source
+    kf target -s development
+    if kf marketplace | awk '{print $1}' | grep cloud-service-broker; then
+      echo "Cloud-service-broker already registered, exiting..."
+      exit 0
+    fi
+    kf create-service-broker cloud-service-broker ${API_USERNAME} ${API_PASSWORD} http://csb-controller.kf-csb/

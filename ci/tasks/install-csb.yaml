@@ -3,6 +3,11 @@ platform: linux
 inputs:
 - name: kubeconfig
 
+params:
+ API_USERNAME: ((api_username))
+ API_PASSWORD: ((api_password))
+ DB_USERNAME: ((db_user))
+ DB_PASSWORD: ((db_password))
 run:
   path: bash
   args:
@@ -16,13 +21,13 @@ run:
       credentials: ""
       project: ((project_id))
     db:
-      host: ((instance_connection_name))
-      password: ((db_password))
-      user: ((db_user))
+      host: 127.0.0.1
+      password: ${DB_PASSWORD}
+      user: ${DB_USERNAME}
       tls: false
     api:
-      user: ((api_user))
-      password: ((api_password))
+      user: ${API_USERNAME}
+      password: ${API_PASSWORD}
     EOF
     )"
     curl https://storage.googleapis.com/kf-releases/csb/v1.0.0/kf-csb.yaml \

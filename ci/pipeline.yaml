@@ -278,10 +278,11 @@ jobs:
               - terraform-cloud-service-broker
           - get: cloud-service-broker
             passed: [terraform-cloud-service-broker]
-      - load_var: csb-terraform-outputs
-        file: cloud-service-broker/metadata
-        format: json
-      - *kubeconfig
+      - in_parallel:
+        - load_var: csb-terraform-outputs
+          file: cloud-service-broker/metadata
+          format: json
+        - *kubeconfig
       - task: install-csb
         file: kf-infra/ci/tasks/install-csb.yaml
         image: pcf-ops
@@ -294,3 +295,20 @@ jobs:
           project_id: ((project_id))
           service_account_email: ((.:csb-terraform-outputs.service_account_email))
           instance_connection_name: ((project_id)):((region)):cloud-service-broker-database
+  - name: register-broker
+    serial: true
+    plan:
+      - in_parallel:
+          - get: pcf-ops
+          - get: kf-infra
+            trigger: true
+            passed:
+              - install-csb
+              - install-kf
+      - *kubeconfig
+      - task: install-csb
+        file: kf-infra/ci/tasks/register-broker.yaml
+        image: pcf-ops
+        vars:
+          api_password: ((csb-api.password))
+          api_username: ((csb-api.username))
