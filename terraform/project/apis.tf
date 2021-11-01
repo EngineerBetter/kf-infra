@@ -74,3 +74,7 @@ resource "google_project_service" "gkehub" {
 resource "google_project_service" "service_usage" {
   service = "serviceusage.googleapis.com"
 }
+
+resource "google_project_service" "service_usage" {
+  service = "sqladmin.googleapis.com"
+}
