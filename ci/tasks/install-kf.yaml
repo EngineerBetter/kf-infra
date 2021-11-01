@@ -40,3 +40,5 @@ run:
           }
         }
       }]"
+
+    kf doctor --retries=20
