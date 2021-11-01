@@ -209,7 +209,10 @@ jobs:
   - in_parallel:
     - get: kf-infra
       trigger: true
-      passed: [terraform-kubernetes]
+      passed:
+      - install-asm
+      - install-tekton
+      - install-configconnector
     - get: pcf-ops
     - get: kubernetes
       passed: [terraform-kubernetes]
