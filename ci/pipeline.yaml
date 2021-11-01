@@ -147,3 +147,22 @@ jobs:
       zone: *cluster_zone
       cluster_name: *cluster_name
     params: {GOOGLE_CREDENTIALS: ((gcp_credentials_json))}
+
+- name: install-tekton
+  serial: true
+  plan:
+  - in_parallel:
+    - get: kf-infra
+      trigger: true
+      passed: [terraform-kubernetes]
+    - get: pcf-ops
+  - task: generate-kubeconfig
+    file: kf-infra/ci/tasks/generate-kubeconfig.yaml
+    params:
+      GOOGLE_CREDENTIALS: ((gcp_credentials_json))
+      ZONE: *cluster_zone
+      CLUSTER: ((cluster_name))
+  - task: install-tekton
+    file: kf-infra/ci/tasks/generate-kubeconfig.yaml
+    image: pcf-ops
+    vars: {tekton_version: ((tekton_version))}

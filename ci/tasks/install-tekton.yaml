@@ -1,0 +1,18 @@
+platform: linux
+
+inputs:
+- name: kubeconfig
+
+run:
+  path: bash
+  args:
+  - -euo
+  - pipefail
+  - -c
+  - |
+    source kubeconfig/source
+
+    kubectl \
+      apply \
+      --filename \
+      "https://storage.googleapis.com/tekton-releases/pipeline/previous/v((tekton_version))/release.yaml"
