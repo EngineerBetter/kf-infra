@@ -5,285 +5,286 @@ locals:
   cluster_zone: &cluster_zone ((region))-a
 
 resource_types:
-- name: gcs-resource
-  type: registry-image
-  source: {repository: frodenas/gcs-resource}
+  - name: gcs-resource
+    type: registry-image
+    source: { repository: frodenas/gcs-resource }
 
-- name: terraform
-  type: registry-image
-  source:
-    repository: ljfranklin/terraform-resource
-    tag: '1.0.10'
+  - name: terraform
+    type: registry-image
+    source:
+      repository: ljfranklin/terraform-resource
+      tag: "1.0.10"
 
 resources:
-- name: kf-infra
-  type: git
-  icon: github
-  source: {uri: https://github.com/EngineerBetter/kf-infra}
+  - name: kf-infra
+    type: git
+    icon: github
+    source: { uri: https://github.com/EngineerBetter/kf-infra }
 
-- name: concourse-gcp-tf-bootstrap
-  type: git
-  icon: github
-  source: {uri: https://github.com/EngineerBetter/concourse-gcp-tf-bootstrap}
+  - name: concourse-gcp-tf-bootstrap
+    type: git
+    icon: github
+    source:
+      { uri: https://github.com/EngineerBetter/concourse-gcp-tf-bootstrap }
 
-- name: project-setup-tfstate
-  type: gcs-resource
-  icon: database
-  source:
-    bucket: ((project_id))
-    json_key: ((inception_gcp_credentials_json))
-    versioned_file: ci/terraform.tfstate
-
-- name: project
-  type: terraform
-  icon: terraform
-  source:
-    env_name: ((env_name))-project
-    backend_type: gcs
-    backend_config:
+  - name: project-setup-tfstate
+    type: gcs-resource
+    icon: database
+    source:
       bucket: ((project_id))
-      prefix: terraform/project-account-and-bucket
-    env: {GOOGLE_CREDENTIALS: ((inception_gcp_credentials_json))}
-    vars:
-      project_id: ((project_id))
-      region: ((region))
+      json_key: ((inception_gcp_credentials_json))
+      versioned_file: ci/terraform.tfstate
 
-- name: kubernetes
-  type: terraform
-  icon: terraform
-  source:
-    env_name: default
-    backend_type: gcs
-    backend_config:
-      bucket: ((project_id))
-      prefix: terraform/kubernetes
-    env:
-      GOOGLE_CREDENTIALS: ((gcp_credentials_json))
-      GCE_SERVICE_ACCOUNT: ((gcp_credentials_json))
-    vars:
-      project_id: ((project_id))
-      region: ((region))
-      vpc_name: *vpc_name
-      cluster_name: *cluster_name
-      account_id: ((kf_service_account_id))
+  - name: project
+    type: terraform
+    icon: terraform
+    source:
+      env_name: ((env_name))-project
+      backend_type: gcs
+      backend_config:
+        bucket: ((project_id))
+        prefix: terraform/project-account-and-bucket
+      env: { GOOGLE_CREDENTIALS: ((inception_gcp_credentials_json)) }
+      vars:
+        project_id: ((project_id))
+        region: ((region))
 
-- name: cloud-service-broker
-  type: terraform
-  icon: terraform
-  source:
-    env_name: default
-    backend_type: gcs
-    backend_config:
-      bucket: ((project_id))
-      prefix: terraform/cloud-service-broker
-    env:
-      GOOGLE_CREDENTIALS: ((gcp_credentials_json))
-      GCE_SERVICE_ACCOUNT: ((gcp_credentials_json))
-    vars:
-      project_id: ((project_id))
-      region: ((region))
-      database_password:  ((csb.password))
-      database_user: ((csb.username))
+  - name: kubernetes
+    type: terraform
+    icon: terraform
+    source:
+      env_name: default
+      backend_type: gcs
+      backend_config:
+        bucket: ((project_id))
+        prefix: terraform/kubernetes
+      env:
+        GOOGLE_CREDENTIALS: ((gcp_credentials_json))
+        GCE_SERVICE_ACCOUNT: ((gcp_credentials_json))
+      vars:
+        project_id: ((project_id))
+        region: ((region))
+        vpc_name: *vpc_name
+        cluster_name: *cluster_name
+        account_id: ((kf_service_account_id))
 
-- name: pcf-ops
-  type: registry-image
-  icon: docker
-  source: {repository: engineerbetter/pcf-ops}
+  - name: cloud-service-broker
+    type: terraform
+    icon: terraform
+    source:
+      env_name: default
+      backend_type: gcs
+      backend_config:
+        bucket: ((project_id))
+        prefix: terraform/cloud-service-broker
+      env:
+        GOOGLE_CREDENTIALS: ((gcp_credentials_json))
+        GCE_SERVICE_ACCOUNT: ((gcp_credentials_json))
+      vars:
+        project_id: ((project_id))
+        region: ((region))
+        database_password: ((csb.password))
+        database_user: ((csb.username))
+
+  - name: pcf-ops
+    type: registry-image
+    icon: docker
+    source: { repository: engineerbetter/pcf-ops }
 
 jobs:
-- name: set-pipeline
-  serial: true
-  plan:
-  - get: kf-infra
-    trigger: true
-  - set_pipeline: self
-    file: kf-infra/ci/pipeline.yaml
-    var_files: [kf-infra/envs/((env_name)).yaml]
-
-- name: setup-project
-  plan:
-  - in_parallel:
-    - get: kf-infra
-      trigger: true
-      passed: [set-pipeline]
-    - get: concourse-gcp-tf-bootstrap
-    - get: pcf-ops
-  - task: bootstrap-terraform
-    file: concourse-gcp-tf-bootstrap/tasks/bootstrap.yml
-    input_mapping:
-      gcp-bootstrap: concourse-gcp-tf-bootstrap
-    params:
-      BILLING_ACCOUNT_ID: ((billing_account_id))
-      BUCKET_LOCATION: ((region))
-      FOLDER_NAME: ((project_folder))
-      GCP_CREDENTIALS_JSON: ((inception_gcp_credentials_json))
-      ORGANIZATION_ID: ((organization_id))
-      PROJECT_ID: ((project_id))
-      PROJECT_NAME: ((project_id))
-      GCP_FLAKINESS_SLEEP: "60"
-    ensure:
-      put: project-setup-tfstate
-      params: {file: tfstate-out/terraform.tfstate}
-  - put: project
-    params: {terraform_source: kf-infra/terraform/project}
-  - task: add-gcp-creds-to-credhub
-    image: pcf-ops
-    file: kf-infra/ci/tasks/credhub-set-service-account-creds.yaml
-    vars:
-      CREDHUB_CA_CERT: ((credhub.ca_cert))
-      CREDHUB_SECRET: ((credhub.secret))
-      CREDHUB_CLIENT: ((credhub.client))
-      CREDHUB_SERVER: ((credhub.server))
-      name: /concourse/((concourse_team))/((concourse_pipeline))/gcp_credentials_json
-    input_mapping: {service_creds: project}
-
-- name: terraform-kubernetes
-  serial: true
-  plan:
-  - get: kf-infra
-    trigger: true
-    passed: [setup-project]
-  - put: kubernetes
-    params: {terraform_source: kf-infra/terraform/kubernetes}
-
-- name: install-asm
-  serial: true
-  plan:
-  - in_parallel:
-    - get: kf-infra
-      trigger: true
-      passed: [terraform-kubernetes]
-    - get: pcf-ops
-  - task: download-asmcli
-    image: pcf-ops
-    file: kf-infra/ci/tasks/download-asmcli.yaml
-    vars: {asm_version: ((asm_version))}
-  - task: install-asm
-    image: pcf-ops
-    file: kf-infra/ci/tasks/install-asm.yaml
-    vars:
-      project_id: ((project_id))
-      zone: *cluster_zone
-      cluster_name: *cluster_name
-    params: {GOOGLE_CREDENTIALS: ((gcp_credentials_json))}
-
-- name: install-tekton
-  serial: true
-  plan:
-  - in_parallel:
-    - get: kf-infra
-      trigger: true
-      passed: [terraform-kubernetes]
-    - get: pcf-ops
-    - get: kubernetes
-      passed: [terraform-kubernetes]
-  - in_parallel:
-    - task: generate-kubeconfig
-      file: kf-infra/ci/tasks/generate-kubeconfig.yaml
-      params:
-        GOOGLE_CREDENTIALS: ((gcp_credentials_json))
-        ZONE: *cluster_zone
-        CLUSTER: *cluster_name
-    - load_var: kubernetes-terraform-outputs
-      file: kubernetes/metadata
-      format: json
-  - task: install-tekton
-    file: kf-infra/ci/tasks/install-tekton.yaml
-    image: pcf-ops
-    vars:
-      tekton_version: ((tekton_version))
-      service_account_email: ((.:kubernetes-terraform-outputs.service_account_email))
-
-- name: install-configconnector
-  serial: true
-  plan:
-  - in_parallel:
-    - get: kf-infra
-      trigger: true
-      passed: [terraform-kubernetes]
-    - get: pcf-ops
-    - get: kubernetes
-      passed: [terraform-kubernetes]
-  - in_parallel:
-    - task: generate-kubeconfig
-      file: kf-infra/ci/tasks/generate-kubeconfig.yaml
-      params:
-        GOOGLE_CREDENTIALS: ((gcp_credentials_json))
-        ZONE: *cluster_zone
-        CLUSTER: *cluster_name
-    - load_var: kubernetes-terraform-outputs
-      file: kubernetes/metadata
-      format: json
-  - task: install-configconnector
-    file: kf-infra/ci/tasks/install-configconnector.yaml
-    image: pcf-ops
-    vars:
-      configconnector_version: ((configconnector_version))
-      service_account_email: ((.:kubernetes-terraform-outputs.service_account_email))
-
-- name: install-kf
-  serial: true
-  plan:
-  - in_parallel:
-    - get: kf-infra
-      trigger: true
-      passed:
-      - install-asm
-      - install-tekton
-      - install-configconnector
-    - get: pcf-ops
-    - get: kubernetes
-      passed: [terraform-kubernetes]
-  - &kubeconfig
-    task: generate-kubeconfig
-    file: kf-infra/ci/tasks/generate-kubeconfig.yaml
-    params:
-      GOOGLE_CREDENTIALS: ((gcp_credentials_json))
-      ZONE: *cluster_zone
-      CLUSTER: *cluster_name
-  - task: install-kf
-    file: kf-infra/ci/tasks/install-kf.yaml
-    image: pcf-ops
-    vars:
-      kf_version: ((kf_version))
-      service_account_name: ((kf_service_account_id))
-      container_registry_url: ((region))-docker.pkg.dev/((project_id))/kf-cluster-((env_name))
-      project_id: ((project_id))
-
-- name: terraform-cloud-service-broker
-  serial: true
-  plan:
-  - get: kf-infra
-    trigger: true
-    passed: [setup-project]
-  - put: cloud-service-broker
-    params: {terraform_source: kf-infra/terraform/cloud-service-broker}
-
-- name: install-csb
-  serial: true
-  plan:
-    - in_parallel:
-      - get: pcf-ops
+  - name: set-pipeline
+    serial: true
+    plan:
       - get: kf-infra
         trigger: true
-        passed:
-        - terraform-kubernetes
-        - terraform-cloud-service-broker
-      - get: cloud-service-broker
-        passed: [terraform-cloud-service-broker]
-    - load_var: csb-terraform-outputs
-      file: cloud-service-broker/metadata
-      format: json
-    - *kubeconfig
-    - task: install-csb
-      file: kf-infra/ci/tasks/install-csb.yaml
-      image: pcf-ops
-      vars:
-        api_password: ((csb-api.password))
-        api_user: ((csb-api.username))
-        db_password: ((csb.password))
-        db_user: ((csb.username))
-        region: ((region))
-        project_id: ((project_id))
-        service_account_email: ((.:csb-terraform-outputs.service_account_email))
-        instance_connection_name: ((project_id)):((region)):cloud-service-broker-database
+      - set_pipeline: self
+        file: kf-infra/ci/pipeline.yaml
+        var_files: [kf-infra/envs/((env_name)).yaml]
+
+  - name: setup-project
+    plan:
+      - in_parallel:
+          - get: kf-infra
+            trigger: true
+            passed: [set-pipeline]
+          - get: concourse-gcp-tf-bootstrap
+          - get: pcf-ops
+      - task: bootstrap-terraform
+        file: concourse-gcp-tf-bootstrap/tasks/bootstrap.yml
+        input_mapping:
+          gcp-bootstrap: concourse-gcp-tf-bootstrap
+        params:
+          BILLING_ACCOUNT_ID: ((billing_account_id))
+          BUCKET_LOCATION: ((region))
+          FOLDER_NAME: ((project_folder))
+          GCP_CREDENTIALS_JSON: ((inception_gcp_credentials_json))
+          ORGANIZATION_ID: ((organization_id))
+          PROJECT_ID: ((project_id))
+          PROJECT_NAME: ((project_id))
+          GCP_FLAKINESS_SLEEP: "60"
+        ensure:
+          put: project-setup-tfstate
+          params: { file: tfstate-out/terraform.tfstate }
+      - put: project
+        params: { terraform_source: kf-infra/terraform/project }
+      - task: add-gcp-creds-to-credhub
+        image: pcf-ops
+        file: kf-infra/ci/tasks/credhub-set-service-account-creds.yaml
+        vars:
+          CREDHUB_CA_CERT: ((credhub.ca_cert))
+          CREDHUB_SECRET: ((credhub.secret))
+          CREDHUB_CLIENT: ((credhub.client))
+          CREDHUB_SERVER: ((credhub.server))
+          name: /concourse/((concourse_team))/((concourse_pipeline))/gcp_credentials_json
+        input_mapping: { service_creds: project }
+
+  - name: terraform-kubernetes
+    serial: true
+    plan:
+      - get: kf-infra
+        trigger: true
+        passed: [setup-project]
+      - put: kubernetes
+        params: { terraform_source: kf-infra/terraform/kubernetes }
+
+  - name: install-asm
+    serial: true
+    plan:
+      - in_parallel:
+          - get: kf-infra
+            trigger: true
+            passed: [terraform-kubernetes]
+          - get: pcf-ops
+      - task: download-asmcli
+        image: pcf-ops
+        file: kf-infra/ci/tasks/download-asmcli.yaml
+        vars: { asm_version: ((asm_version)) }
+      - task: install-asm
+        image: pcf-ops
+        file: kf-infra/ci/tasks/install-asm.yaml
+        vars:
+          project_id: ((project_id))
+          zone: *cluster_zone
+          cluster_name: *cluster_name
+        params: { GOOGLE_CREDENTIALS: ((gcp_credentials_json)) }
+
+  - name: install-tekton
+    serial: true
+    plan:
+      - in_parallel:
+          - get: kf-infra
+            trigger: true
+            passed: [terraform-kubernetes]
+          - get: pcf-ops
+          - get: kubernetes
+            passed: [terraform-kubernetes]
+      - in_parallel:
+          - task: generate-kubeconfig
+            file: kf-infra/ci/tasks/generate-kubeconfig.yaml
+            params:
+              GOOGLE_CREDENTIALS: ((gcp_credentials_json))
+              ZONE: *cluster_zone
+              CLUSTER: *cluster_name
+          - load_var: kubernetes-terraform-outputs
+            file: kubernetes/metadata
+            format: json
+      - task: install-tekton
+        file: kf-infra/ci/tasks/install-tekton.yaml
+        image: pcf-ops
+        vars:
+          tekton_version: ((tekton_version))
+          service_account_email: ((.:kubernetes-terraform-outputs.service_account_email))
+
+  - name: install-configconnector
+    serial: true
+    plan:
+      - in_parallel:
+          - get: kf-infra
+            trigger: true
+            passed: [terraform-kubernetes]
+          - get: pcf-ops
+          - get: kubernetes
+            passed: [terraform-kubernetes]
+      - in_parallel:
+          - task: generate-kubeconfig
+            file: kf-infra/ci/tasks/generate-kubeconfig.yaml
+            params:
+              GOOGLE_CREDENTIALS: ((gcp_credentials_json))
+              ZONE: *cluster_zone
+              CLUSTER: *cluster_name
+          - load_var: kubernetes-terraform-outputs
+            file: kubernetes/metadata
+            format: json
+      - task: install-configconnector
+        file: kf-infra/ci/tasks/install-configconnector.yaml
+        image: pcf-ops
+        vars:
+          configconnector_version: ((configconnector_version))
+          service_account_email: ((.:kubernetes-terraform-outputs.service_account_email))
+
+  - name: install-kf
+    serial: true
+    plan:
+      - in_parallel:
+          - get: kf-infra
+            trigger: true
+            passed:
+              - install-asm
+              - install-tekton
+              - install-configconnector
+          - get: pcf-ops
+          - get: kubernetes
+            passed: [terraform-kubernetes]
+      - &kubeconfig
+        task: generate-kubeconfig
+        file: kf-infra/ci/tasks/generate-kubeconfig.yaml
+        params:
+          GOOGLE_CREDENTIALS: ((gcp_credentials_json))
+          ZONE: *cluster_zone
+          CLUSTER: *cluster_name
+      - task: install-kf
+        file: kf-infra/ci/tasks/install-kf.yaml
+        image: pcf-ops
+        vars:
+          kf_version: ((kf_version))
+          service_account_name: ((kf_service_account_id))
+          container_registry_url: ((region))-docker.pkg.dev/((project_id))/kf-cluster-((env_name))
+          project_id: ((project_id))
+
+  - name: terraform-cloud-service-broker
+    serial: true
+    plan:
+      - get: kf-infra
+        trigger: true
+        passed: [setup-project]
+      - put: cloud-service-broker
+        params: { terraform_source: kf-infra/terraform/cloud-service-broker }
+
+  - name: install-csb
+    serial: true
+    plan:
+      - in_parallel:
+          - get: pcf-ops
+          - get: kf-infra
+            trigger: true
+            passed:
+              - terraform-kubernetes
+              - terraform-cloud-service-broker
+          - get: cloud-service-broker
+            passed: [terraform-cloud-service-broker]
+      - load_var: csb-terraform-outputs
+        file: cloud-service-broker/metadata
+        format: json
+      - *kubeconfig
+      - task: install-csb
+        file: kf-infra/ci/tasks/install-csb.yaml
+        image: pcf-ops
+        vars:
+          api_password: ((csb-api.password))
+          api_user: ((csb-api.username))
+          db_password: ((csb.password))
+          db_user: ((csb.username))
+          region: ((region))
+          project_id: ((project_id))
+          service_account_email: ((.:csb-terraform-outputs.service_account_email))
+          instance_connection_name: ((project_id)):((region)):cloud-service-broker-database
