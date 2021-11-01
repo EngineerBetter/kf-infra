@@ -12,6 +12,8 @@ run:
   - |
     source kubeconfig/source
 
+    set -x
+
     kubectl \
       apply \
       --filename \
@@ -20,5 +22,6 @@ run:
     kubectl \
       --namespace tekton-pipelines \
       annotate ServiceAccount \
+      --overwrite=true \
       --selector=app.kubernetes.io/part-of=tekton-pipelines \
       iam.gke.io/gcp-service-account=((service_account_email))
