@@ -1,0 +1,42 @@
+platform: linux
+
+inputs:
+- name: kubeconfig
+
+run:
+  path: bash
+  args:
+  - -euo
+  - pipefail
+  - -c
+  - |
+    source kubeconfig/source
+
+    kubectl \
+      apply \
+      --filename "https://storage.googleapis.com/kf-releases/v((kf_version))/operator.yaml"
+
+    kubectl \
+      apply \
+      --filename "https://storage.googleapis.com/kf-releases/v((kf_version))/kfsystem.yaml"
+
+    kubectl \
+      patch \
+      kfsystem kfsystem \
+      --type='json' \
+      --patch "[{
+        'op': 'replace',
+        'path': '/spec/kf',
+        'value': {
+          'enabled': true,
+          'config': {
+            'spaceContainerRegistry': '((container_registry_url))',
+            'secrets': {
+              'workloadidentity': {
+                'googleserviceaccount': '((service_account_name))',
+                'googleprojectid': '((project_id))'
+              }
+            }
+          }
+        }
+      }]"

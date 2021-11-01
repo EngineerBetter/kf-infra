@@ -201,3 +201,33 @@ jobs:
     vars:
       configconnector_version: ((configconnector_version))
       service_account_email: ((.:kubernetes-terraform-outputs.service_account_email))
+
+- name: install-kf
+  serial: true
+  plan:
+  plan:
+  - in_parallel:
+    - get: kf-infra
+      trigger: true
+      passed: [terraform-kubernetes]
+    - get: pcf-ops
+    - get: kubernetes
+      passed: [terraform-kubernetes]
+  - in_parallel:
+    - task: generate-kubeconfig
+      file: kf-infra/ci/tasks/generate-kubeconfig.yaml
+      params:
+        GOOGLE_CREDENTIALS: ((gcp_credentials_json))
+        ZONE: *cluster_zone
+        CLUSTER: *cluster_name
+    - load_var: kubernetes-terraform-outputs
+      file: kubernetes/metadata
+      format: json
+  - task: install-kf
+    file: kf-infra/ci/tasks/install-kf.yaml
+    image: pcf-ops
+    vars:
+      kf_version: ((kf_version))
+      service_account_name: ((.:kubernetes-terraform-outputs.service_account_name))
+      container_registry_url: ((region))-docker.pkg.dev/((project_id))/kf-cluster-((env_name))
+      project_id: ((project_id))
