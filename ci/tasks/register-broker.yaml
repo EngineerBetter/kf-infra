@@ -4,7 +4,7 @@ inputs:
 - name: kubeconfig
 
 params:
- API_USERNAME: ((api_username))
+ API_USERNAME: ((api_user))
  API_PASSWORD: ((api_password))
 run:
   path: bash

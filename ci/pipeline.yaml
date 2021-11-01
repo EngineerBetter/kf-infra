@@ -306,9 +306,9 @@ jobs:
               - install-csb
               - install-kf
       - *kubeconfig
-      - task: install-csb
+      - task: register-broker
         file: kf-infra/ci/tasks/register-broker.yaml
         image: pcf-ops
         vars:
           api_password: ((csb-api.password))
-          api_username: ((csb-api.username))
+          api_user: ((csb-api.username))
