@@ -1,0 +1,27 @@
+platform: linux
+
+inputs:
+- name: kubeconfig
+
+run:
+  path: bash
+  args:
+  - -euo
+  - pipefail
+  - -c
+  - |
+    source kubeconfig/source
+    cat << EOF | kubectl apply -f -
+    apiVersion: kf.dev/v1alpha1
+    kind: Space
+    metadata:
+      name: development
+    spec:
+      buildConfig:
+        containerRegistry: ((container_registry_url))
+        defaultToV3Stack: null
+      networkConfig:
+        appNetworkPolicy: {}
+        buildNetworkPolicy: {}
+      runtimeConfig: {}
+    EOF

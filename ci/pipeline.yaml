@@ -3,6 +3,7 @@ locals:
   vpc_name: &vpc_name kf-vpc-((env_name))
   cluster_name: &cluster_name kf-cluster-((env_name))
   cluster_zone: &cluster_zone ((region))-a
+  registry_url: &registry_url ((region))-docker.pkg.dev/((project_id))/kf-cluster-((env_name))
 
 resource_types:
   - name: gcs-resource
@@ -248,8 +249,13 @@ jobs:
         vars:
           kf_version: ((kf_version))
           service_account_name: ((kf_service_account_id))
-          container_registry_url: ((region))-docker.pkg.dev/((project_id))/kf-cluster-((env_name))
+          container_registry_url: *registry_url
           project_id: ((project_id))
+      - task: create-space
+        file: kf-infra/ci/tasks/create-space.yaml
+        image: pcf-ops
+        vars:
+          container_registry_url: *registry_url
 
   - name: terraform-cloud-service-broker
     serial: true
