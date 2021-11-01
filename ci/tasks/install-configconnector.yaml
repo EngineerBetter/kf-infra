@@ -31,3 +31,11 @@ run:
       mode: cluster
       googleServiceAccount: ((service_account_email))
     EOF
+
+    kubectl wait --namespace cnrm-system --for=condition=Ready pod --all --timeout=60s
+
+    kubectl annotate serviceaccount \
+      --namespace cnrm-system \
+      --overwrite \
+      cnrm-controller-manager \
+      iam.gke.io/gcp-service-account=((service_account_email))
