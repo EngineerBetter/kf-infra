@@ -4,11 +4,8 @@ image_resource:
   type: registry-image
   source: {repository: engineerbetter/pcf-ops}
 
-#inputs:
-#- name: kf-pipelines
-
-#outputs:
-#- name: csb
+inputs:
+- name: kubeconfig
 
 run:
   path: bash
@@ -17,6 +14,7 @@ run:
   - pipefail
   - -c
   - |
+    source kubeconfig/source
     export config="$(cat << EOF
     gcp:
       credentials: ""

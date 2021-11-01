@@ -234,7 +234,8 @@ jobs:
     - get: pcf-ops
     - get: kubernetes
       passed: [terraform-kubernetes]
-  - task: generate-kubeconfig
+  - &kubeconfig
+    task: generate-kubeconfig
     file: kf-infra/ci/tasks/generate-kubeconfig.yaml
     params:
       GOOGLE_CREDENTIALS: ((gcp_credentials_json))
@@ -273,6 +274,7 @@ jobs:
     - load_var: csb-terraform-outputs
       file: cloud-service-broker/metadata
       format: json
+    - *kubeconfig
     - task: install-csb
       file: kf-infra/ci/tasks/install-csb.yaml
       image: pcf-ops
