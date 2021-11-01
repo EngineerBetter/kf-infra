@@ -1,7 +1,7 @@
 ---
-# locals:
-#   vpc_name: &vpc_name kf-vpc-((tgodkin))
-#   cluster_name: &cluster_name kf-cluster-((tgodkin))
+locals:
+  vpc_name: &vpc_name kf-vpc-((env_name))
+  cluster_name: &cluster_name kf-cluster-((env_name))
 
 resource_types:
 - name: gcs-resource
@@ -46,6 +46,24 @@ resources:
     vars:
       project_id: ((project_id))
       region: ((region))
+
+- name: kubernetes
+  type: terraform
+  icon: terraform
+  source:
+    env_name: default
+    backend_type: gcs
+    backend_config:
+      bucket: ((project_id))
+      prefix: terraform/kubernetes
+    env:
+      GOOGLE_CREDENTIALS: ((gcp_credentials_json))
+      GCE_SERVICE_ACCOUNT: ((gcp_credentials_json))
+    vars:
+      project_id: ((project_id))
+      region: ((region))
+      vpc_name: *vpc_name
+      cluster_name: *cluster_name
 
 - name: pcf-ops
   type: registry-image
@@ -99,19 +117,11 @@ jobs:
       name: /concourse/((concourse_team))/((concourse_pipeline))/gcp_credentials_json
     input_mapping: {service_creds: project}
 
-# - name: terraform-cluster
-#   serial: true
-#   plan:
-#   - in_parallel:
-#     - get: kf-infra
-#       trigger: true
-#       passed: [set-pipeline]
-#     - get: pcf-ops-image
-#   - put: kf-terraform
-#     params:
-#       terraform_source: kf-infra/terraform
-#       vars:
-#         project_id: ((project_id))
-#         region: ((region))
-#         vpc_name: *vpc_name
-#         cluster_name: *cluster_name
+- name: terraform-kubernetes
+  serial: true
+  plan:
+  - get: kf-infra
+    trigger: true
+    passed: [setup-project]
+  - put: kubernetes
+    params: {terraform_source: kf-infra/terraform/kubernetes}
