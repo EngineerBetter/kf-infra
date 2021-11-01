@@ -85,23 +85,19 @@ jobs:
       GCP_FLAKINESS_SLEEP: "60"
     ensure:
       put: project-setup-tfstate
-      params:
-        file: tfstate-out/terraform.tfstate
+      params: {file: tfstate-out/terraform.tfstate}
   - put: project
     params: {terraform_source: kf-infra/terraform/project}
-  - load_var: service_creds
-    file: project/metadata
-    format: json
   - task: add-gcp-creds-to-credhub
     image: pcf-ops
-    file: kf-infra/ci/tasks/credhub.yaml
-    params:
+    file: kf-infra/ci/tasks/credhub-set-service-account-creds.yaml
+    vars:
       CREDHUB_CA_CERT: ((credhub.ca_cert))
       CREDHUB_SECRET: ((credhub.secret))
       CREDHUB_CLIENT: ((credhub.client))
       CREDHUB_SERVER: ((credhub.server))
-    vars:
-      cli_args: set --value '((.:service_creds.gcp_credentials_json))' --type value --name /concourse/((concourse_team))/((concourse_pipeline))/gcp_credentials_json
+      name: /concourse/((concourse_team))/((concourse_pipeline))/gcp_credentials_json
+    input_mapping: {service_creds: project}
 
 # - name: terraform-cluster
 #   serial: true
