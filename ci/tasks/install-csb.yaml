@@ -1,0 +1,41 @@
+platform: linux
+
+image_resource:
+  type: registry-image
+  source: {repository: engineerbetter/pcf-ops}
+
+#inputs:
+#- name: kf-pipelines
+
+#outputs:
+#- name: csb
+
+run:
+  path: bash
+  args:
+  - -euo
+  - pipefail
+  - -c
+  - |
+    export config="$(cat << EOF
+    gcp:
+      credentials: ""
+      project: ((project_id))
+    db:
+      host: ((instance_connection_name))
+      password: ((db_password))
+      user: ((db_user))
+      tls: false
+    api:
+      user: ((api_user))
+      password: ((api_password))
+    EOF
+    )"
+    kubectl create namespace kf-csb
+    kubectl create secret generic csb-secret --namespace kf-csb --from-literal=config.yml="$config"
+    curl https://storage.googleapis.com/kf-releases/csb/v1.0.0/kf-csb.yaml \
+    | sed \
+      -e "s|<GSA_NAME>|((service_account_email))|g" \
+      -e "s|<INSTANCE_CONNECTION_NAME>|((instance_connection_name))|g" \
+      -e "s|<DB_PORT>|3306|g" \
+    | kubectl apply -f -

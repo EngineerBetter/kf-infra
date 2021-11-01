@@ -257,3 +257,31 @@ jobs:
     passed: [setup-project]
   - put: cloud-service-broker
     params: {terraform_source: kf-infra/terraform/cloud-service-broker}
+
+- name: install-csb
+  serial: true
+  plan:
+    - in_parallel:
+      - get: pcf-ops
+      - get: kf-infra
+        trigger: true
+        passed:
+        - terraform-kubernetes
+        - terraform-cloud-service-broker
+      - get: cloud-service-broker
+        passed: [terraform-cloud-service-broker]
+    - load_var: csb-terraform-outputs
+      file: cloud-service-broker/metadata
+      format: json
+    - task: install-csb
+      file: kf-infra/ci/tasks/install-csb.yaml
+      image: pcf-ops
+      vars:
+        api_password: ((csb-api.password))
+        api_user: ((csb-api.username))
+        db_password: ((csb.password))
+        db_user: ((csb.username))
+        region: ((region))
+        project_id: ((project_id))
+        service_account_email: ((.:csb-terraform-outputs.service_account_email))
+        instance_connection_name: ((project_id)):((region)):cloud-service-broker-database
