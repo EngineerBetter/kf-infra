@@ -30,6 +30,5 @@ run:
       --cluster_name ((cluster_name)) \
       --cluster_location ((zone)) \
       --enable_all \
-      --ca mesh_ca 
-    #   --print-config \
-    # > config.yaml
+      --ca mesh_ca \
+      --option legacy-default-ingressgateway
