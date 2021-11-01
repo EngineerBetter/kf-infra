@@ -67,6 +67,24 @@ resources:
       cluster_name: *cluster_name
       account_id: ((kf_service_account_id))
 
+- name: cloud-service-broker
+  type: terraform
+  icon: terraform
+  source:
+    env_name: default
+    backend_type: gcs
+    backend_config:
+      bucket: ((project_id))
+      prefix: terraform/cloud-service-broker
+    env:
+      GOOGLE_CREDENTIALS: ((gcp_credentials_json))
+      GCE_SERVICE_ACCOUNT: ((gcp_credentials_json))
+    vars:
+      project_id: ((project_id))
+      region: ((region))
+      database_password:  ((csb.password))
+      database_user: ((csb.username))
+
 - name: pcf-ops
   type: registry-image
   icon: docker
@@ -206,7 +224,6 @@ jobs:
 - name: install-kf
   serial: true
   plan:
-  plan:
   - in_parallel:
     - get: kf-infra
       trigger: true
@@ -231,3 +248,12 @@ jobs:
       service_account_name: ((kf_service_account_id))
       container_registry_url: ((region))-docker.pkg.dev/((project_id))/kf-cluster-((env_name))
       project_id: ((project_id))
+
+- name: terraform-cloud-service-broker
+  serial: true
+  plan:
+  - get: kf-infra
+    trigger: true
+    passed: [setup-project]
+  - put: cloud-service-broker
+    params: {terraform_source: kf-infra/terraform/cloud-service-broker}
