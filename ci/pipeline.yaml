@@ -146,3 +146,4 @@ jobs:
       project_id: ((project_id))
       zone: *cluster_zone
       cluster_name: *cluster_name
+    params: {GOOGLE_CREDENTIALS: ((gcp_credentials_json))}
