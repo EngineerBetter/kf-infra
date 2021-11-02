@@ -119,6 +119,8 @@ groups:
   - name: cloud-service-broker
     jobs:
       - kf-push-csb
+      - kf-test-app
+      - kf-delete-csb
 jobs:
   - name: set-pipeline
     serial: true
@@ -387,6 +389,65 @@ jobs:
           app_name: redis-example-app
           instance_name: *redis_csb_instance_name
           space: development
+      - task: restart-app
+        file: kf-infra/ci/tasks/kf.yaml
+        image: pcf-ops
+        vars:
+          args: "restart redis-example-app --space development"
+
+  - name: kf-test-app
+    serial: true
+    plan:
+      - in_parallel:
+          - get: pcf-ops
+          - get: kf-infra
+            trigger: true
+            passed:
+              - kf-push-csb
+      - *kubeconfig
+      - task: test-put
+        file: kf-infra/ci/tasks/kf-test-put.yaml
+        image: pcf-ops
+        vars:
+          app_name: redis-example-app
+          space: development
+      - task: test-get
+        file: kf-infra/ci/tasks/kf-test-get.yaml
+        image: pcf-ops
+        vars:
+          app_name: redis-example-app
+          space: development
+
+  - name: kf-delete-csb
+    serial: true
+    plan:
+      - in_parallel:
+          - get: pcf-ops
+          - get: kf-infra
+            trigger: true
+            passed:
+              - kf-test-app
+      - *kubeconfig
+      - task: unbind-app-service
+        file: kf-infra/ci/tasks/kf-unbind-service.yaml
+        image: pcf-ops
+        vars:
+          app_name: redis-example-app
+          instance_name: *redis_csb_instance_name
+          space: development
+      - in_parallel:
+          - task: delete-app
+            file: kf-infra/ci/tasks/kf-delete.yaml
+            image: pcf-ops
+            vars:
+              app_name: redis-example-app
+              space: development
+          - task: delete-service
+            file: kf-infra/ci/tasks/kf-delete-service.yaml
+            image: pcf-ops
+            vars:
+              instance_name: *redis_csb_instance_name
+              space: development
 
   - name: destroy-kubernetes
     serial_groups: [create-kubernetes]
