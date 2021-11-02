@@ -351,6 +351,6 @@ jobs:
         passed: [terraform-cloud-service-broker]
       - put: cloud-service-broker
         params:
-          terraform_source: kf-infra/terraform/cloud-service-broker,
-          action: destroy,
+          terraform_source: kf-infra/terraform/cloud-service-broker
+          action: destroy
         get_params: { action: destroy }
