@@ -32,6 +32,8 @@ run:
       googleServiceAccount: ((service_account_email))
     EOF
 
+    sleep 30
+
     kubectl wait --namespace cnrm-system --for=condition=Ready pod --all --timeout=60s
 
     kubectl annotate serviceaccount \
