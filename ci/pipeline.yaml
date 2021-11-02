@@ -112,13 +112,13 @@ groups:
       - install-kf
       - terraform-cloud-service-broker
       - register-broker
-  - name: destroy-kubernetes
+  - name: destroy
     jobs:
       - destroy-kubernetes
       - destroy-cloud-service-broker
   - name: cloud-service-broker
     jobs:
-      - install-app
+      - kf-push-csb
 jobs:
   - name: set-pipeline
     serial: true
@@ -343,7 +343,7 @@ jobs:
           api_password: ((csb-api.password))
           api_user: ((csb-api.username))
 
-  - name: install-app
+  - name: kf-push-csb
     serial: true
     plan:
       - in_parallel:
