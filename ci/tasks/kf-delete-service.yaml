@@ -1,0 +1,19 @@
+platform: linux
+
+inputs:
+- name: kubeconfig
+
+run:
+  path: bash
+  args:
+  - -euo
+  - pipefail
+  - -c
+  - |
+    source kubeconfig/source
+    kf target ((space))
+    if kf services | grep -q ((instance_name)); then
+      kf delete-service ((instance_name))
+      exit 0
+    fi
+      echo "((instance_name)) not found. Nothing to do."

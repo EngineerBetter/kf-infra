@@ -1,0 +1,21 @@
+platform: linux
+
+inputs:
+- name: kubeconfig
+
+run:
+  path: bash
+  args:
+  - -euo
+  - pipefail
+  - -c
+  - |
+    source kubeconfig/source
+    kf target ((space))
+    host=$(kf apps | grep ((app_name)) | awk '{print $6}' | jq -r '.[0]')
+    req=$(curl http://$host/foo -X PUT -d'data=bar' 2>&1)
+    if [[ $? -ne 0 ]]; then
+      echo "PUT Test failed: $req"
+      exit 1
+    fi
+    echo "PUT Test passed"

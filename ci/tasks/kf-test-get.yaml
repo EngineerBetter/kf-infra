@@ -1,0 +1,21 @@
+platform: linux
+
+inputs:
+- name: kubeconfig
+
+run:
+  path: bash
+  args:
+  - -euo
+  - pipefail
+  - -c
+  - |
+    source kubeconfig/source
+    kf target ((space))
+    host=$(kf apps | grep ((app_name)) | awk '{print $6}' | jq -r '.[0]')
+    var=$(curl http://$host/foo)
+    if [[ $var != "bar" ]]; then
+      echo "GET Test failed: $var"
+      exit 1
+    fi
+    echo "GET Test passed"

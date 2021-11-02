@@ -1,0 +1,19 @@
+platform: linux
+
+inputs:
+- name: kubeconfig
+
+run:
+  path: bash
+  args:
+  - -euo
+  - pipefail
+  - -c
+  - |
+    source kubeconfig/source
+    kf target ((space))
+    if kf bindings | grep ((app_name)) | grep -q ((instance_name)); then
+      kf unbind-service ((app_name)) ((instance_name))
+      exit 0
+    fi
+      echo "((app_name)) alredy not bound to ((instance_name)). Nothing to do."
