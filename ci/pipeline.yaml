@@ -313,7 +313,7 @@ jobs:
           region: ((region))
           project_id: ((project_id))
           service_account_email: ((.:csb-terraform-outputs.service_account_email))
-          instance_connection_name: ((project_id)):((region)):cloud-service-broker-database
+          instance_connection_name: ((project_id)):((region)):((.:csb-terraform-outputs.csb_db_name))
   - name: register-broker
     serial: true
     plan:

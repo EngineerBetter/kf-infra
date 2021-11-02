@@ -3,8 +3,11 @@ provider "google" {
   region  = var.region
 }
 
+resource "random_id" "db-suffix" {
+  byte_length           = 4
+}
 resource "google_sql_database_instance" "csb" {
-  name             = "cloud-service-broker-database"
+  name             = "cloud-service-broker-database-${random_id.db-suffix.hex}"
   database_version = "MYSQL_5_7"
   region           = var.region
   deletion_protection = false
