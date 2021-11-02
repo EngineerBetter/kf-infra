@@ -5,7 +5,7 @@ resource "google_container_cluster" "primary" {
   initial_node_count       = 1
   network                  = google_compute_network.vpc.name
   subnetwork               = google_compute_subnetwork.subnet.name
-
+  ip_allocation_policy { }
   workload_identity_config {
     workload_pool = "${var.project_id}.svc.id.goog"
   }
