@@ -92,6 +92,23 @@ resources:
     icon: docker
     source: { repository: engineerbetter/pcf-ops }
 
+groups:
+  - name: create
+    jobs:
+      - set-pipeline
+      - setup-project
+      - terraform-kubernetes
+      - install-asm
+      - install-tekton
+      - install-configconnector
+      - install-kf
+      - terraform-cloud-service-broker
+      - install-csb
+      - register-broker
+  - name: destroy
+    jobs:
+      - destroy-kubernetes
+      - destroy-cloud-service-broker
 jobs:
   - name: set-pipeline
     serial: true
@@ -140,6 +157,7 @@ jobs:
         input_mapping: { service_creds: project }
 
   - name: terraform-kubernetes
+    serial_groups: [create-kubernetes]
     serial: true
     plan:
       - get: kf-infra
@@ -259,6 +277,7 @@ jobs:
 
   - name: terraform-cloud-service-broker
     serial: true
+    serial_groups: [create-cloud-service-broker]
     plan:
       - get: kf-infra
         trigger: true
@@ -279,10 +298,10 @@ jobs:
           - get: cloud-service-broker
             passed: [terraform-cloud-service-broker]
       - in_parallel:
-        - load_var: csb-terraform-outputs
-          file: cloud-service-broker/metadata
-          format: json
-        - *kubeconfig
+          - load_var: csb-terraform-outputs
+            file: cloud-service-broker/metadata
+            format: json
+          - *kubeconfig
       - task: install-csb
         file: kf-infra/ci/tasks/install-csb.yaml
         image: pcf-ops
@@ -312,3 +331,26 @@ jobs:
         vars:
           api_password: ((csb-api.password))
           api_user: ((csb-api.username))
+
+  - name: destroy-kubernetes
+    serial_groups: [create-kubernetes]
+    serial: true
+    plan:
+      - get: kf-infra
+        passed: [terraform-kubernetes]
+      - put: kubernetes
+        params:
+          terraform_source: kf-infra/terraform/kubernetes
+          action: destroy
+        get_params: { action: destroy }
+  - name: destroy-cloud-service-broker
+    serial: true
+    serial_groups: [create-cloud-service-broker]
+    plan:
+      - get: kf-infra
+        passed: [terraform-cloud-service-broker]
+      - put: cloud-service-broker
+        params:
+          terraform_source: kf-infra/terraform/cloud-service-broker,
+          action: destroy,
+        get_params: { action: destroy }
