@@ -376,7 +376,7 @@ jobs:
               name: *redis_csb_service_name
               plan: basic
       - task: set-app-env
-        file: kf-infra/ci/tasks/run-kf.yaml
+        file: kf-infra/ci/tasks/kf.yaml
         image: pcf-ops
         vars:
           args: "set-env redis-example-app service_name kf-redis-((project_id)) --space development"
