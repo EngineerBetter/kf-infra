@@ -35,7 +35,7 @@ run:
       -e "s|<GSA_NAME>|((service_account_email))|g" \
       -e "s|<INSTANCE_CONNECTION_NAME>|((instance_connection_name))|g" \
       -e "s|<DB_PORT>|3306|g" > manifest.yml
-    echo "---" >> manifest.yml
+    echo -ne "\n---\n" >> manifest.yml
     kubectl create namespace kf-csb --dry-run=client -o yaml >> manifest.yml
     echo "---" >> manifest.yml
     kubectl create secret generic csb-secret --namespace kf-csb --from-literal=config.yml="$config" --dry-run=client -o yaml >> manifest.yml
