@@ -7,6 +7,7 @@ resource "google_sql_database_instance" "csb" {
   name             = "cloud-service-broker-database"
   database_version = "MYSQL_5_7"
   region           = var.region
+  deletion_protection = false
 
   settings {
     tier = "db-f1-micro"
