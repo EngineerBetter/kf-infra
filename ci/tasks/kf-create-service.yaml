@@ -1,0 +1,19 @@
+platform: linux
+
+inputs:
+- name: kubeconfig
+
+run:
+  path: bash
+  args:
+  - -euo
+  - pipefail
+  - -c
+  - |
+    source kubeconfig/source
+    kf target ((space))
+    if kf services | awk '{print $1}' | grep -q ((instance_name)); then
+      echo "Service ((instance_name)) already exists, exiting..."
+      exit 0
+    fi
+    kf create-service ((name)) ((plan)) "((instance_name))" -c '((parameters))'

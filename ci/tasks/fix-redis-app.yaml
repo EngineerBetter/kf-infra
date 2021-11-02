@@ -1,0 +1,14 @@
+platform: linux
+
+inputs:
+- name: redis-app
+
+outputs:
+- name: redis-app
+
+run:
+  path: sed
+  args:
+  - -i
+  - /password/d
+  - redis-app/lib/app.rb

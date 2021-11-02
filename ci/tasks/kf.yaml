@@ -1,0 +1,15 @@
+platform: linux
+
+inputs:
+- name: kubeconfig
+- name: input
+  optional: true
+run:
+  path: bash
+  args:
+  - -euo
+  - pipefail
+  - -c
+  - |
+    source kubeconfig/source
+    kf ((args))

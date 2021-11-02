@@ -1,0 +1,19 @@
+platform: linux
+
+inputs:
+- name: kubeconfig
+
+run:
+  path: bash
+  args:
+  - -euo
+  - pipefail
+  - -c
+  - |
+    source kubeconfig/source
+    kf target ((space))
+    if kf bindings | grep ((app_name)) | grep -q ((instance_name)); then
+      echo "Service binding between ((app_name)) and ((instance_name)) already exists, exiting..."
+      exit 0
+    fi
+    kf bind-service ((app_name)) ((instance_name))
