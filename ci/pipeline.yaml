@@ -365,7 +365,7 @@ jobs:
             input_mapping:
               input: redis-app
             vars:
-              args: "push -f input/manifest.yml --space development"
+              args: "push -f input/manifest.yml --space development --stack cflinuxfs3"
           - task: deploy-redis
             file: kf-infra/ci/tasks/kf-create-service.yaml
             image: pcf-ops
