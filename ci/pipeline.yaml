@@ -4,6 +4,8 @@ locals:
   cluster_name: &cluster_name kf-cluster-((env_name))
   cluster_zone: &cluster_zone ((region))-a
   registry_url: &registry_url ((region))-docker.pkg.dev/((project_id))/kf-cluster-((env_name))
+  redis_csb_service_name: &redis_csb_service_name csb-google-redis
+  csb_redis_instance_name: &redis_csb_instance_name kf-redis-((project_id))
 
 resource_types:
   - name: gcs-resource
@@ -21,6 +23,11 @@ resources:
     type: git
     icon: github
     source: { uri: https://github.com/EngineerBetter/kf-infra }
+
+  - name: redis-app
+    type: git
+    icon: github
+    source: { uri: https://github.com/pivotal-cf/cf-redis-example-app }
 
   - name: concourse-gcp-tf-bootstrap
     type: git
@@ -99,16 +106,19 @@ groups:
       - setup-project
       - terraform-kubernetes
       - install-asm
+      - install-csb
       - install-tekton
       - install-configconnector
       - install-kf
       - terraform-cloud-service-broker
-      - install-csb
       - register-broker
-  - name: destroy
+  - name: destroy-kubernetes
     jobs:
       - destroy-kubernetes
       - destroy-cloud-service-broker
+  - name: cloud-service-broker
+    jobs:
+      - install-app
 jobs:
   - name: set-pipeline
     serial: true
@@ -314,6 +324,7 @@ jobs:
           project_id: ((project_id))
           service_account_email: ((.:csb-terraform-outputs.service_account_email))
           instance_connection_name: ((.:csb-terraform-outputs.csb_db_connection_name))
+
   - name: register-broker
     serial: true
     plan:
@@ -332,6 +343,51 @@ jobs:
           api_password: ((csb-api.password))
           api_user: ((csb-api.username))
 
+  - name: install-app
+    serial: true
+    plan:
+      - in_parallel:
+          - get: pcf-ops
+          - get: redis-app
+          - get: kf-infra
+            trigger: true
+            passed:
+              - register-broker
+      - in_parallel:
+          - *kubeconfig
+          - task: fix-app
+            file: kf-infra/ci/tasks/fix-redis-app.yaml
+            image: pcf-ops
+      - in_parallel:
+          - task: deploy-app
+            file: kf-infra/ci/tasks/kf.yaml
+            image: pcf-ops
+            input_mapping:
+              input: redis-app
+            vars:
+              args: "push -f input/manifest.yml --space development"
+          - task: deploy-redis
+            file: kf-infra/ci/tasks/kf-create-service.yaml
+            image: pcf-ops
+            vars:
+              instance_name: kf-redis-((project_id))
+              space: development
+              parameters: '{"region":"((region))","authorized_network":"kf-vpc-((env_name))"}'
+              name: *redis_csb_service_name
+              plan: basic
+      - task: set-app-env
+        file: kf-infra/ci/tasks/run-kf.yaml
+        image: pcf-ops
+        vars:
+          args: "set-env redis-example-app service_name kf-redis-((project_id)) --space development"
+      - task: bind-app-service
+        file: kf-infra/ci/tasks/kf-bind-service.yaml
+        image: pcf-ops
+        vars:
+          app_name: redis-example-app
+          instance_name: *redis_csb_instance_name
+          space: development
+
   - name: destroy-kubernetes
     serial_groups: [create-kubernetes]
     serial: true
@@ -343,6 +399,7 @@ jobs:
           terraform_source: kf-infra/terraform/kubernetes
           action: destroy
         get_params: { action: destroy }
+
   - name: destroy-cloud-service-broker
     serial: true
     serial_groups: [create-cloud-service-broker]
