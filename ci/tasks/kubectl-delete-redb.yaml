@@ -1,0 +1,18 @@
+platform: linux
+
+inputs:
+- name: kubeconfig
+run:
+  path: bash
+  args:
+  - -euo
+  - pipefail
+  - -c
+  - |
+    source kubeconfig/source
+
+    if kubectl get -n ((namespace)) redb  | grep -q ((instance_name)); then
+      kubectl delete  -n ((namespace)) redb ((instance_name))
+      exit 0
+    fi
+    echo "Redis Database not found. Nothing to do."
