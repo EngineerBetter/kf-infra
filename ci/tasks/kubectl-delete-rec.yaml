@@ -10,18 +10,10 @@ run:
   - -c
   - |
     source kubeconfig/source
+    if kubectl get -n ((namespace)) rec  | grep -q ((cluster_name)); then
+      kubectl delete  -n ((namespace)) rec ((cluster_name))
+      exit 0
+    fi
+    echo "Redis Cluster not found. Nothing to do."
 
-    cat <<EOF | kubectl apply -f -
-    apiVersion: app.redislabs.com/v1
-    kind: RedisEnterpriseCluster
-    metadata:
-      name: ((cluster_name))
-      namespace: ((namespace))
-    spec:
-      nodes: ((nodes))
-      createServiceAccount: true
-      enforceIPv4: true
-      persistentSpec:
-        enabled: false
-    EOF
 
