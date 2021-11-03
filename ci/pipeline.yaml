@@ -5,8 +5,8 @@ locals:
   cluster_zone: &cluster_zone ((region))-a
   registry_url: &registry_url ((region))-docker.pkg.dev/((project_id))/kf-cluster-((env_name))
   redis_csb_service_name: &redis_csb_service_name csb-google-redis
-  csb_redis_instance_name: &redis_csb_instance_name kf-redis-((project_id))
-
+  redis_instance_name: &redis_instance_name kf-redis-((project_id))
+  redb_namespace: &redb_namespace redb
 resource_types:
   - name: gcs-resource
     type: registry-image
@@ -107,6 +107,7 @@ groups:
       - terraform-kubernetes
       - install-asm
       - install-csb
+      - install-redis-enterprise
       - install-tekton
       - install-configconnector
       - install-kf
@@ -119,8 +120,14 @@ groups:
   - name: cloud-service-broker
     jobs:
       - kf-push-csb
-      - kf-test-app
+      - kf-test-csb
       - kf-delete-csb
+
+  - name: redis-enterprise-operator
+    jobs:
+      - kf-push-redb
+      - kf-test-redb
+
 jobs:
   - name: set-pipeline
     serial: true
@@ -361,7 +368,8 @@ jobs:
             file: kf-infra/ci/tasks/fix-redis-app.yaml
             image: pcf-ops
       - in_parallel:
-          - task: deploy-app
+          - &deploy-app
+            task: deploy-app
             file: kf-infra/ci/tasks/kf.yaml
             image: pcf-ops
             input_mapping:
@@ -387,7 +395,7 @@ jobs:
         image: pcf-ops
         vars:
           app_name: redis-example-app
-          instance_name: *redis_csb_instance_name
+          instance_name: *redis_instance_name
           space: development
       - task: restart-app
         file: kf-infra/ci/tasks/kf.yaml
@@ -395,7 +403,7 @@ jobs:
         vars:
           args: "restart redis-example-app --space development"
 
-  - name: kf-test-app
+  - name: kf-test-csb
     serial: true
     plan:
       - in_parallel:
@@ -433,7 +441,7 @@ jobs:
         image: pcf-ops
         vars:
           app_name: redis-example-app
-          instance_name: *redis_csb_instance_name
+          instance_name: *redis_instance_name
           space: development
       - in_parallel:
           - task: delete-app
@@ -446,7 +454,7 @@ jobs:
             file: kf-infra/ci/tasks/kf-delete-service.yaml
             image: pcf-ops
             vars:
-              instance_name: *redis_csb_instance_name
+              instance_name: *redis_instance_name
               space: development
 
   - name: destroy-kubernetes
@@ -472,3 +480,96 @@ jobs:
           terraform_source: kf-infra/terraform/cloud-service-broker
           action: destroy
         get_params: { action: destroy }
+
+  - name: install-redis-enterprise
+    serial: true
+    plan:
+      - in_parallel:
+          - get: pcf-ops
+          - get: redis-enterprise-operator
+          - get: kf-infra
+            trigger: true
+            passed:
+              - terraform-kubernetes
+      - *kubeconfig
+      - task: install-operator
+        file: kf-infra/ci/tasks/install-redis-enterprise-operator.yaml
+        image: pcf-ops
+        vars:
+          namespace: *redb_namespace
+
+  - name: kf-push-redb
+    serial: true
+    plan:
+      - in_parallel:
+          - get: pcf-ops
+          - get: redis-enterprise-operator
+          - get: redis-app
+          - get: kf-infra
+            trigger: true
+            passed:
+              - kf-delete-csb
+      - *kubeconfig
+      - task: create-cluster
+        file: kf-infra/ci/tasks/kubectl-create-rec.yaml
+        image: pcf-ops
+        vars:
+          namespace: *redb_namespace
+          cluster_name: rec
+          nodes: 1
+      - in_parallel:
+          - *deploy-app
+          - task: deploy-redb
+            file: kf-infra/ci/tasks/kubectl-create-redb.yaml
+            image: pcf-ops
+            vars:
+              namespace: *redb_namespace
+              instance_name: *redis_instance_name
+              memory_size: 100MB
+      - task: create-redb-service
+        file: kf-infra/ci/tasks/kf-create-redb-service.yaml
+        image: pcf-ops
+        vars:
+          namespace: *redb_namespace
+          instance_name: *redis_instance_name
+          space: development
+      - task: set-app-env
+        file: kf-infra/ci/tasks/kf.yaml
+        image: pcf-ops
+        vars:
+          args: "set-env redis-example-app service_name kf-redis-((project_id)) --space development"
+      - task: bind-app-service
+        file: kf-infra/ci/tasks/kf-bind-service.yaml
+        image: pcf-ops
+        vars:
+          app_name: redis-example-app
+          instance_name: *redis_instance_name
+          space: development
+      - task: restart-app
+        file: kf-infra/ci/tasks/kf.yaml
+        image: pcf-ops
+        vars:
+          args: "restart redis-example-app --space development"
+
+  - name: kf-test-redb
+    serial: true
+    plan:
+      - in_parallel:
+          - get: pcf-ops
+          - get: kf-infra
+            trigger: true
+            passed:
+              - kf-push-redb
+      - *kubeconfig
+      - task: test-put
+        file: kf-infra/ci/tasks/kf-test-put.yaml
+        image: pcf-ops
+        vars:
+          app_name: redis-example-app
+          space: development
+      - task: test-get
+        file: kf-infra/ci/tasks/kf-test-get.yaml
+        image: pcf-ops
+        vars:
+          app_name: redis-example-app
+          space: development
