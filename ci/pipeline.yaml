@@ -29,6 +29,11 @@ resources:
     icon: github
     source: { uri: https://github.com/pivotal-cf/cf-redis-example-app }
 
+  - name: redis-enterprise-operator
+    type: git
+    icon: github
+    source: { uri: https://github.com/RedisLabs/redis-enterprise-k8s-docs.git}
+
   - name: concourse-gcp-tf-bootstrap
     type: git
     icon: github
