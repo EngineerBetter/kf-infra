@@ -439,7 +439,7 @@ jobs:
           - get: kf-infra
             trigger: true
             passed:
-              - kf-test-app
+              - kf-test-csb
       - *kubeconfig
       - task: unbind-app-service
         file: kf-infra/ci/tasks/kf-unbind-service.yaml
