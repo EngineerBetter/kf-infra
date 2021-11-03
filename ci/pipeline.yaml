@@ -132,6 +132,7 @@ groups:
     jobs:
       - kf-push-redb
       - kf-test-redb
+      - kf-delete-redb
 
 jobs:
   - name: set-pipeline
@@ -578,3 +579,46 @@ jobs:
         vars:
           app_name: redis-example-app
           space: development
+
+  - name: kf-delete-redb
+    serial: true
+    plan:
+      - in_parallel:
+          - get: pcf-ops
+          - get: kf-infra
+            trigger: true
+            passed:
+              - kf-test-redb
+      - *kubeconfig
+      - task: unbind-app-service
+        file: kf-infra/ci/tasks/kf-unbind-service.yaml
+        image: pcf-ops
+        vars:
+          app_name: redis-example-app
+          instance_name: *redis_instance_name
+          space: development
+      - in_parallel:
+          - task: delete-app
+            file: kf-infra/ci/tasks/kf-delete.yaml
+            image: pcf-ops
+            vars:
+              app_name: redis-example-app
+              space: development
+          - task: delete-service
+            file: kf-infra/ci/tasks/kf-delete-service.yaml
+            image: pcf-ops
+            vars:
+              instance_name: *redis_instance_name
+              space: development
+          - task: delete-redb
+            file: kf-infra/ci/tasks/kubectl-delete-redb.yaml
+            image: pcf-ops
+            vars:
+              instance_name: *redis_instance_name
+              namespace: *redb_namespace
+      - task: delete-cluster
+        file: kf-infra/ci/tasks/kubectl-delete-rec.yaml
+        image: pcf-ops
+        vars:
+          cluster_name: rec
+          namespace: *redb_namespace
