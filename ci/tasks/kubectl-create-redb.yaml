@@ -1,0 +1,21 @@
+platform: linux
+
+inputs:
+- name: kubeconfig
+run:
+  path: bash
+  args:
+  - -euo
+  - pipefail
+  - -c
+  - |
+    source kubeconfig/source
+    cat << EOF | kubectl apply -f - 
+    apiVersion: app.redislabs.com/v1alpha1
+    kind: RedisEnterpriseDatabase
+    metadata:
+      name: ((instance_name))
+      namespace: ((namespace))
+    spec:
+      memorySize: ((memory_size))
+    EOF

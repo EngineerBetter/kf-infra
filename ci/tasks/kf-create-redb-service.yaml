@@ -1,0 +1,24 @@
+platform: linux
+
+inputs:
+- name: kubeconfig
+run:
+  path: bash
+  args:
+  - -euo
+  - pipefail
+  - -c
+  - |
+    source kubeconfig/source
+    kf target ((space))
+    host=$(kubectl --namespace ((namespace)) get secrets redb-((instance_name)) -o jsonpath='{.data.service_name}' | base64 -d)
+    port=$(kubectl --namespace ((namespace))  get secrets redb-((instance_name)) -o jsonpath='{.data.port}' | base64 -d)
+    password=$(kubectl --namespace ((namespace)) get secrets redb-((instance_name)) -o jsonpath='{.data.password}' | base64 -d)
+    cat <<EOF > credentials.json
+    {
+     "host": "$host.((namespace)).svc.cluster.local",
+     "port": $port,
+     "password": "$password"
+    }
+    EOF
+    kf create-user-provided-service ((instance_name)) -t "redb,redis" --mock-class "redis-enterprise-database" --mock-plan "basic" -p credentials.json

@@ -1,0 +1,37 @@
+platform: linux
+
+inputs:
+- name: kubeconfig
+- name: redis-enterprise-operator
+run:
+  path: bash
+  args:
+  - -euo
+  - pipefail
+  - -c
+  - |
+    # install operator
+    source kubeconfig/source
+    cat << EOF | kubectl apply -f -
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: ((namespace))
+    EOF
+    kubectl apply --namespace ((namespace)) -f redis-enterprise-operator/bundle.yaml
+    kubectl --namespace ((namespace)) wait --for=condition=Ready pods --all --timeout=60s
+    # install validation webhook
+    kubectl label namespace ((namespace)) name=((namespace)) --overwrite
+    CERT=`kubectl --namespace ((namespace)) get secret admission-tls -o jsonpath='{.data.cert}'`
+    sed 's/NAMESPACE_OF_SERVICE_ACCOUNT/((namespace))/g' redis-enterprise-operator/admission/webhook.yaml | kubectl apply -f -
+    cat > modified-webhook.yaml <<EOF
+    webhooks:
+    - name: redb.admission.redislabs
+      namespaceSelector:
+       matchLabels:
+         name: ((namespace))      
+      clientConfig:
+        caBundle: $CERT
+      admissionReviewVersions: ["v1beta1"]
+    EOF
+    kubectl patch ValidatingWebhookConfiguration redb-admission --patch "$(cat modified-webhook.yaml)"
